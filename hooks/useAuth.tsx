@@ -1,11 +1,26 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, UserRole, AuthState, LoginRequest, Permission, ROLE_PERMISSIONS } from '../types/auth';
+import { 
+  User, 
+  UserRole, 
+  AuthState, 
+  LoginRequest, 
+  Permission, 
+  ApplicationModule,
+  PermissionAction,
+  hasPermission as checkPermission,
+  canApproveRequests,
+  needsApproval,
+  ApprovalRequest
+} from '../types/auth';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
-  hasPermission: (module: string, action: string) => boolean;
+  hasPermission: (module: ApplicationModule, action: PermissionAction) => boolean;
   isRole: (role: UserRole) => boolean;
+  canApprove: () => boolean;
+  requiresApproval: (requestType: 'fertilization' | 'treatment' | 'irrigation') => boolean;
+  switchUser: (userId: number) => void; // For demo purposes
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,24 +40,79 @@ export const useAuthProvider = () => {
     isLoading: true,
   });
 
+  // Mock users for all roles as defined in Phase 1
+  const mockUsers: User[] = [
+    {
+      id: 1,
+      email: 'admin@croppo.com',
+      name: 'Farm Administrator',
+      role: 'Admin',
+      isActive: true,
+      farmId: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      email: 'manager@croppo.com',
+      name: 'Farm Manager',
+      role: 'Manager',
+      isActive: true,
+      farmId: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      createdBy: 1,
+    },
+    {
+      id: 3,
+      email: 'agronomist@croppo.com',
+      name: 'Field Agronomist',
+      role: 'Agronomist',
+      isActive: true,
+      farmId: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      createdBy: 1,
+    },
+    {
+      id: 4,
+      email: 'inventory@croppo.com',
+      name: 'Inventory Manager',
+      role: 'InventoryManager',
+      isActive: true,
+      farmId: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      createdBy: 1,
+    },
+    {
+      id: 5,
+      email: 'accountant@croppo.com',
+      name: 'Farm Accountant',
+      role: 'Accountant',
+      isActive: true,
+      farmId: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      createdBy: 1,
+    },
+  ];
+
   useEffect(() => {
     checkExistingSession();
   }, []);
 
   const checkExistingSession = async () => {
     try {
-      // Simulate a default admin user
-      const mockUser: User = {
-        id: 1,
-        email: 'admin@farm.com',
-        name: 'Farm Administrator',
-        role: 'Admin',
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      // Simulate checking for existing session - default to Admin for demo
+      const defaultUser = mockUsers[0]; // Admin user
       setAuthState({
-        user: mockUser,
+        user: defaultUser,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -58,49 +128,16 @@ export const useAuthProvider = () => {
   const login = async (credentials: LoginRequest) => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
-      // Mock login - in real app, this would call the API
-      const mockUsers: User[] = [
-        {
-          id: 1,
-          email: 'admin@farm.com',
-          name: 'Farm Administrator',
-          role: 'Admin',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 2,
-          email: 'manager@farm.com',
-          name: 'Farm Manager',
-          role: 'Manager',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 3,
-          email: 'agronomist@farm.com',
-          name: 'Field Agronomist',
-          role: 'Agronomist',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 4,
-          email: 'accountant@farm.com',
-          name: 'Farm Accountant',
-          role: 'Accountant',
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
+      
       const user = mockUsers.find(u => u.email === credentials.email);
+      
       if (!user) {
         throw new Error('Invalid credentials');
       }
+      
+      // Update last login time
+      user.lastLoginAt = new Date().toISOString();
+      
       setAuthState({
         user,
         isAuthenticated: true,
@@ -124,31 +161,48 @@ export const useAuthProvider = () => {
     });
   };
 
-  const hasPermission = (module: string, action: string): boolean => {
+  // Updated permission checking using the new system
+  const hasPermissionCheck = (module: ApplicationModule, action: PermissionAction): boolean => {
     if (!authState.user) return false;
-    const userPermissions = ROLE_PERMISSIONS[authState.user.role];
-    // Check for wildcard permissions (Admin)
-    const wildcardPermission = userPermissions.find(
-      p => p.module === '*' && p.action === action
-    );
-    if (wildcardPermission?.allowed) return true;
-    // Check for specific module permissions
-    const modulePermission = userPermissions.find(
-      p => p.module === module && p.action === action
-    );
-    return modulePermission?.allowed || false;
+    return checkPermission(authState.user.role, module, action);
   };
 
   const isRole = (role: UserRole): boolean => {
     return authState.user?.role === role;
   };
 
+  const canApprove = (): boolean => {
+    if (!authState.user) return false;
+    return canApproveRequests(authState.user.role);
+  };
+
+  const requiresApproval = (requestType: 'fertilization' | 'treatment' | 'irrigation'): boolean => {
+    if (!authState.user) return false;
+    return needsApproval(authState.user.role, requestType);
+  };
+
+  // Demo function to switch between users for testing
+  const switchUser = (userId: number) => {
+    const user = mockUsers.find(u => u.id === userId);
+    if (user) {
+      user.lastLoginAt = new Date().toISOString();
+      setAuthState(prev => ({
+        ...prev,
+        user,
+        isAuthenticated: true,
+      }));
+    }
+  };
+
   return {
     ...authState,
     login,
     logout,
-    hasPermission,
+    hasPermission: hasPermissionCheck,
     isRole,
+    canApprove,
+    requiresApproval,
+    switchUser,
   };
 };
 

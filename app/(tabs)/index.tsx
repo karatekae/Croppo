@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, RefreshControl } from 'react-native';
-import { Calendar, CircleCheck as CheckCircle, Clock, TrendingUp, TriangleAlert as AlertTriangle, Users, Droplets, DollarSign, Sprout, Package } from 'lucide-react-native';
+import { Calendar, CircleCheck as CheckCircle, Clock, TrendingUp, TriangleAlert as AlertTriangle, Users, Droplets, DollarSign, Sprout, Package, Shield } from 'lucide-react-native';
 import { useOperations } from '@/hooks/useOperations';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardMetrics, Alert } from '@/types/operations';
+import { ApprovalRequestsDashboard } from '@/components/ApprovalRequestsDashboard';
 
 export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetrics | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [showRBACDemo, setShowRBACDemo] = useState(false);
   
   const operationsData = useOperations();
   const { user, hasPermission } = useAuth();
@@ -268,10 +270,28 @@ export default function Dashboard() {
             <Text style={styles.title}>Farm Dashboard</Text>
             <Text style={styles.subtitle}>Welcome back, {user?.name || 'User'}!</Text>
           </View>
-          <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-            <Text style={styles.refreshButtonText}>Refresh</Text>
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              style={[styles.demoButton, showRBACDemo && styles.demoButtonActive]} 
+              onPress={() => setShowRBACDemo(!showRBACDemo)}
+            >
+              <Shield size={16} color={showRBACDemo ? "#FFFFFF" : "#10B981"} />
+              <Text style={[styles.demoButtonText, showRBACDemo && styles.demoButtonTextActive]}>
+                RBAC Demo
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+              <Text style={styles.refreshButtonText}>Refresh</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* RBAC Demo Dashboard */}
+        {showRBACDemo ? (
+          <ApprovalRequestsDashboard />
+        ) : (
+          <>
+            {/* Original Dashboard Content */}
 
         {/* KPI Widgets */}
         <View style={styles.kpiContainer}>
@@ -355,6 +375,8 @@ export default function Dashboard() {
             </View>
           )}
         </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -415,6 +437,33 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#6B7280',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  demoButton: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#10B981',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  demoButtonActive: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  demoButtonText: {
+    color: '#10B981',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  demoButtonTextActive: {
+    color: '#FFFFFF',
   },
   refreshButton: {
     backgroundColor: '#10B981',

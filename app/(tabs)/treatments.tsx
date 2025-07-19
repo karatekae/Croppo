@@ -95,8 +95,8 @@ export default function TreatmentPlanner() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   
   const { hasPermission } = useAuth();
-  const canCreateTreatment = hasPermission('treatments', 'create');
-  const canExportData = hasPermission('treatments', 'export');
+  const canCreateTreatment = hasPermission('treatmentPlans', 'create');
+  const canExportData = hasPermission('treatmentPlans', 'export');
 
   const operations = useOperationsContext();
   const fields = operations.fields;
