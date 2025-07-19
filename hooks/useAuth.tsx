@@ -96,6 +96,15 @@ export const useAuthProvider = () => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
+        {
+          id: 5,
+          email: 'inventory@farm.com',
+          name: 'Inventory Manager',
+          role: 'InventoryManager',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
       ];
       const user = mockUsers.find(u => u.email === credentials.email);
       if (!user) {
