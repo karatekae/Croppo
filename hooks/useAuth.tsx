@@ -7,9 +7,9 @@ import {
   Permission, 
   ApplicationModule,
   PermissionAction,
-  hasPermission as checkPermission,
-  canApproveRequests,
-  needsApproval,
+  hasPermission as checkUserPermission,
+  canApproveRequests as checkCanApproveRequests,
+  needsApproval as checkNeedsApproval,
   ApprovalRequest
 } from '../types/auth';
 
@@ -164,7 +164,7 @@ export const useAuthProvider = () => {
   // Updated permission checking using the new system
   const hasPermissionCheck = (module: ApplicationModule, action: PermissionAction): boolean => {
     if (!authState.user) return false;
-    return checkPermission(authState.user.role, module, action);
+    return checkUserPermission(authState.user.role, module, action);
   };
 
   const isRole = (role: UserRole): boolean => {
@@ -173,12 +173,12 @@ export const useAuthProvider = () => {
 
   const canApprove = (): boolean => {
     if (!authState.user) return false;
-    return canApproveRequests(authState.user.role);
+    return checkCanApproveRequests(authState.user.role);
   };
 
   const requiresApproval = (requestType: 'fertilization' | 'treatment' | 'irrigation'): boolean => {
     if (!authState.user) return false;
-    return needsApproval(authState.user.role, requestType);
+    return checkNeedsApproval(authState.user.role, requestType);
   };
 
   // Demo function to switch between users for testing
